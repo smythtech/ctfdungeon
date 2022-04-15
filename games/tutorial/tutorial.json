@@ -1,0 +1,197 @@
+{
+	"dungeon": {
+		"name":"Tutorial House",
+		"description": "This house is designed to teach you how to play the game. The goal is to leave the house.",
+		"max_points": 10,
+		"rooms": {
+                         "start": {
+                                "id": "start",
+                                "name": "Sitting Room",
+                                "description": "The room is dark and the air is stale. Light seeps in through holes in the ceiling. It must be sunny outside. Various pieces of furniture lay about the room. They are covered in white sheets. The walls of the room are covered in a dark green wallpaper. The room has a few windows, evenly distributed on the external walls. They have been boarded up. Gaps and cracks in the board hint at the weather outside.<br><br><b>Head into the next room using 'go north'</b>",
+                                "directions":  {
+                                        "north": {
+                                                "description": "a doorway leads to another room.",
+                                                "leads_to": "kitchen",
+                                                "on_enter": "You walk through the doorway. Examine the room again to take in your surroundings.",
+                                                "locked": false
+                                                },
+                                        "south": {
+                                                "description": "there is a wall, covered in dark green wall paper. Dark oak skirting runs along the bottom.",
+                                                "leads_to": "",
+                                                "on_enter": "",
+                                                "locked": false
+                                                },
+                                        "east": {
+                                                "description": "there is a fireplace.",
+                                                "leads_to": "",
+                                                "on_enter": "",
+                                                "locked": false
+                                                },
+                                        "west": {
+                                                "description": "there is a door. It is $STATE$.",
+                                                "leads_to": "exterior",
+                                                "on_enter": "You open the door and walk through it.",
+                                                "locked": true
+                                                }
+                                },
+				"features": {
+					"furniture": {
+						"description": "The furniture is covered in dusty sheets. It looks like it's been here a long time.",
+						"locked":false,
+						"linked_to": "",
+						"requires": "",
+						"item": "",
+						"points": 0
+					},
+					"fireplace": {
+						"description": "The bricks lining the fireplace have been blackened by smoke. The dark red bricks at either edge of the fireplace hint at it's original colour. A mirror hangs above the oak mantle. A small stack of kindling sits inside ready to be lit.",
+						"locked":false,
+						"linked_to": "",
+						"requires": "",
+						"item": "cabinet key",
+						"points": 0
+					},
+                                       "door": {
+                                              "description": "A surprisingly sturdy door given the state of the rest of the house. Could this be a way out?",
+						"locked":true,
+						"linked_to": "west",
+						"requires": "door key",
+                                              "item": "",
+                                              "points": 0
+                                        }
+
+				},
+				"actions": {
+					"light fire": {
+						"description": "You try to light the fire, but the kindling is too damp.",
+						"item":"",
+						"points":0
+					}
+				}
+                        },
+			 "kitchen": {
+                               "id": "kitchen",
+				"name": "Kitchen",
+				"description": "You are in a kitchen. There are no appliances here bar an iron stove. There is debris scattered across the floor. A single cabinet remains intact, the rest appear to have degraded and fallen apart. A slither of light enters from a window, which appears to have been boarded up from the outside.<br><br><b>You can examine features in a room using the 'examine' action. Try 'examine cabinet'. Is there anything else here that you could examine?</b>",
+				"directions":  {
+					"north": {
+					       "description": "a boarded up window prevents light from entering.",
+					       "leads_to": "",
+                                                "on_enter": "",
+                                                "locked": false
+                                                },
+					"south": {
+						"description": "there is a doorway leading back the way you came.",
+						"leads_to": "start",
+                                                "on_enter": "You walk through the doorway.",
+                                                "locked": false
+						},
+					"east": {
+						"description": "there is an intact cabinet.",
+						"leads_to": "",
+                                                "on_enter": "",
+                                                "locked": false
+						},
+					"west": {
+						"description": "there is a wall with a single painting hanging.",
+						"leads_to": "",
+                                                "on_enter": "",
+                                                "locked": false
+						}
+				},
+				"features": {
+					"cabinet": {
+						"description": "A lockable kitchen cabinet. It is $STATE$.",
+						"locked":true,
+						"linked_to": "",
+						"requires": "cabinet key",
+						"item": "door key",
+						"points": 0
+					},
+                                "painting": {
+                                                "description": "The painting shows a fireplace with a key on the mantle.",
+                                                "locked":false,
+                                                "linked_to": "",
+                                                "requires": "",
+                                                "item": "",
+                                                "points": 0
+                                        }
+
+
+				},
+				"actions": {}
+			},
+                         "exterior": {
+                                "id": "exterior",
+                                "name": "Garden",
+                                "description": "Wooden steps lead down to a grass garden that surrounds the house. A gravel driveway leads off into the mist. Beyond the garden is nothing but mist.",
+                                "directions":  {
+                                        "north": {
+						"description": "grass stretches for about 10 meters. Mist prevents you from seeing any futher.",
+						"leads_to": "",
+                                                "on_enter": "",
+                                                "locked": false
+						},
+                                        "south": {
+						"description": "a car sits in a driveway.",
+						"leads_to": "",
+                                                "on_enter": "",
+                                                "locked": false
+						},
+                                        "east": {
+						"description":"there is a door leading into an old dilapidated house.",
+						"leads_to": "start",
+                                                "on_enter": "You enter the house.",
+                                                "locked": false
+						},
+                                        "west": {
+						"description": "grass stretches for about 10 meters. Mist prevents you from seeing any futher.",
+						"leads_to": "",
+                                                "on_enter": "",
+                                                "locked": false
+						}
+				},
+				"features": {
+					"car": {
+                                                "description": "The door of the car is open. The engine is running. <br><br><b>Some rooms and features will have special actions that can be performed. These actions can either be told to you or discovered by completeing challenges. Use the action 'get in the car' to complete the tutorial.</b>",
+                                                "locked":false,
+                                                "linked_to": "",
+                                                "requires": "",
+                                                "item": "",
+                                                "points": 0
+                                        }
+				},
+				"actions": {
+                                        "get in the car": {
+                                                "description": "You get in the car.",
+                                                "item":"",
+                                                "points":10
+                                        }
+}
+			},
+			"undefined": {
+                                "comment": "Leave this room in. Undefined directions or rooms will lead here.",
+				"name":"",
+				"description": "You can't go this way...",
+                                "items": [],
+				"directions": {}
+			}
+		},
+		"items": {
+			"door key": {
+				"name": "door key",
+				"description": "A large key. Looks like it could be a door key.",
+				"found": "The cabinet contains a key. Looks large enough for a door. You take the key.",
+				"use_success": "You unlock the door.",
+				"use_fail": "Nothing happens."
+			},
+			"cabinet key": {
+				"name": "cabinet key",
+				"description": "A small key with a tag that reads 'cabinet key'.",
+				"found": "A small key sits on the mantle. A tag on the key reads 'cabinet key'. You take it. <br><br><b>Check what items you have with 'examine bag'. Items can be used on things. Go back to the kitchen and try 'use cabinet key on cabinet'</b>",
+				"use_success": "You unlock the cabinet.",
+				"use_fail": "Nothing happens."
+			}
+		}
+	}
+}

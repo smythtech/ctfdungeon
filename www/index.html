@@ -1,0 +1,141 @@
+<html>
+	<head>
+		<style>
+			a {
+				color:#CCCCCC;
+			}
+
+			#links {
+				color:#CCCCCC; width:50%; text-align:right; font-size: 18pt; float:right;
+			}
+
+			#body {
+				background-color:#000000; color:#CCCCCC; max-height:100%; max-width:100%; height:95%; width:100%; margin:0;overflow:none;
+			}
+
+			#header {
+				width:100%;
+			}
+
+			#header_title {
+				width:50%; float:left;
+			}
+			
+			#game-area {
+				max-height:100%; max-width:100%; padding-left:10%; padding-right:10%;overflow:none;margin:0;vertical-align:top;
+			}
+			
+			#text-area {
+				background-color:#000000;height:80%;width:100%;color:#CCCCCC;font-size:16pt;vertical-align:top;overflow:auto;
+			}
+			
+			#prompt {
+				width:100%;background-color:#000000;color:#CCCCCC;font-size:16pt;vertical-align:top;display:none;
+			}
+			
+			#game-select {
+				padding:2%; height:60%;vertical-align:top;text-align:center;display:flex;justify-content:space-evenly;
+			}
+			
+			#game-option {
+				width:300px;border-style:solid;border-radius:16px;height:400px;
+			}
+			
+			#game-option-art {
+				height:60%;
+			}
+			
+			#game-option-name {
+				height:40%;
+			}
+			
+		</style>
+		<script>
+		
+		        var ws;
+			function openWebsocket(game) {
+			
+			        var ta = document.getElementById('text-area')
+				ta.innerHTML = ""
+				document.getElementById('prompt').style.display = 'block';
+				
+			
+		    		ws = new WebSocket("$SERVER_IP$://$SERVER_PORT$/play/" + game);
+		    		ws.onopen = function() {
+
+		    		};
+		    		ws.onmessage = function(e) {
+			        	var ta = document.getElementById('text-area')
+				        var html = ta.innerHTML;
+				        ta.innerHTML = html + '<br/>' + e.data;
+				        ta.scrollTop = ta.scrollHeight;
+			    	};
+				ws.onerror = function(e) {
+		     			var ta = document.getElementById('text-area')
+				        var html = ta.innerHTML;
+		        		ta.innerHTML = html + '<br/>Error: ' + e.data;
+		        		ta.scrollTop = ta.scrollHeight;
+				}
+			    	ws.onclose = function(e) {
+	       			var ta = document.getElementById('text-area')
+				        var html = ta.innerHTML;
+		        		ta.innerHTML = html + '<br/>Connection closed.';
+		        		ta.scrollTop = ta.scrollHeight;
+		    		}
+		    	}
+		    	
+		    	function send() {
+				var prompt = document.getElementById("prompt");
+				ws.send(prompt.value);
+		      		prompt.value = "";
+		    	}
+			
+          </script>
+
+
+
+	</head>
+	<body id="body" name="body">
+
+        <div id="header" name="header">
+		<pre id="header_title" name="header_title">
+ _____ ___________  ______                                    
+/  __ \_   _|  ___| |  _  \                                   
+| /  \/ | | | |_    | | | |_   _ _ __   __ _  ___  ___  _ __  
+| |     | | |  _|   | | | | | | | '_ \ / _` |/ _ \/ _ \| '_ \ 
+| \__/\ | | | |     | |/ /| |_| | | | | (_| |  __/ (_) | | | |
+ \____/ \_/ \_|     |___/  \__,_|_| |_|\__, |\___|\___/|_| |_|
+                                        __/ |                 
+                                       |___/                                                                                                                           
+		</pre>
+
+		<div id="links" name="links">
+		<br><br>
+                <a href="/">Home</a>&nbsp;&nbsp;&nbsp;
+		<a href="https://github.com/smythtech/ctfdungeon">Github</a>&nbsp;&nbsp;&nbsp;
+		<!--<a href="/register">Register</a>&nbsp;&nbsp;&nbsp;
+                <a href="/login">Login</a>&nbsp;&nbsp;&nbsp;-->
+		</div>
+	</div>
+
+	<div id="game-area" name="game-area">
+		<div id="text-area" name="text-area">
+			<p>CTF Dungeon provides a context for Capture The Flag (CTF) challenges in the form of a text-based adventure. Points can be earned by playing the game, solving puzzles, and solving technical challenges presented through the game.</p>		
+			$GAMES$
+		
+		</div>
+		<br>
+		<input id="prompt" name="prompt" type="text" placeholder="Type action and press enter"/>
+	</div>
+	<script>
+       	(function() {
+         		document.getElementById("prompt").addEventListener("keydown", function(event) {
+         			if(event.keyCode == 13) {
+           				send();
+         			}
+         		});
+       	})();
+     </script>
+
+	</body>
+</html>

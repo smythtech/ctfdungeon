@@ -1,0 +1,14 @@
+{
+
+	"games": [
+		{
+			"id": "tutorial",
+			"name": "Tutorial House",
+			"difficulty": "easy",
+			"length": "short",
+			"art_type": "text",
+			"art_file": "./games/tutorial/art.txt"
+		}
+	]
+
+}
