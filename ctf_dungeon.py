@@ -4,9 +4,9 @@ import sys
 import html
 import json
 import random
-import uwsgi
+import datetime
 
-players = {}
+sessions = {}
 
 class Player():
 
@@ -18,7 +18,7 @@ class Player():
     self.current_room = {}
 
   def generate_id(self):
-    return ''.join(random.choice("abcdefghijklmnopqrstuvwxyz1234567890") for _ in range(16))
+    return ''.join(random.choice("abcdefghijklmnopqrstuvwxyz1234567890") for _ in range(64))
 
 
 class Dungeon():
@@ -236,10 +236,10 @@ def get_page(file):
   return contents
 
 def replace_placeholders(output, env):
-  ws_scheme = 'ws'
+  protocol = 'http'
   if 'HTTPS' in env or env['wsgi.url_scheme'] == 'https':
-    ws_scheme = 'wss'
-  output = output.replace("$SERVER_IP$", ws_scheme)
+    protocol = 'https'
+  output = output.replace("$SERVER_IP$", protocol)
   output = output.replace("$SERVER_PORT$", env['HTTP_HOST'])
   if("$GAMES$" in output):
     output = output.replace("$GAMES$", build_games_table_html())
@@ -253,7 +253,7 @@ def build_games_table_html():
     f.close()
     html_output = '<div id="game-select" name="game-select">'
     for i in games["games"]:
-      html_output += '<div id="game-option" onclick=\'openWebsocket(\"' + i["id"] + '\");\'>'
+      html_output += '<div id="game-option" onclick=\'setupGame(\"' + i["id"] + '\");\'>'
       html_output += '<div id="game-option-art" name="game-option-art">'
       if(i["art_type"] == "text"):
         html_output += '<pre>'
@@ -272,49 +272,60 @@ def build_games_table_html():
     html_output += '</div>'
     return html_output
   except Exception as e:
-    print("Error loading and parsing games.json file: " + e)
     return "Error getting available games..."
 
-def handle_websocket(game, env):
+# API endpoint alternitive to the websocket. Easier for deployment on third-party services that use wsgi rather than uwsgi
+def handle_player_request(game, env):
+  cookies = get_cookies(env)
+  resp = ""
+  resp_headers = [('Content-Type', 'text/html')]
+  dungeon = {}
 
-  dungeon_file_path = "./games/" + game + "/" + game + ".json"
-  dungeon = Dungeon()
-
-  uwsgi.websocket_handshake(env['HTTP_SEC_WEBSOCKET_KEY'], env.get('HTTP_ORIGIN', ''))
-
-  try:
+  if("session" not in cookies):
+    player = Player("player")
+    dungeon_file_path = "./games/" + game + "/" + game + ".json"
+    dungeon = Dungeon()
     dungeon.load_dungeon(dungeon_file_path)
-  except Exception as e:
-    uwsgi.websocket_send("Error: Could not load game")
-    print(e)
-    return
+    dungeon.add_player(player)
+    sessions[player.id] = dungeon
+    resp_headers.append(set_cookie_header("session", player.id))
 
+    resp = "Connected to game<br><br>" + dungeon.get_dungeon_desc()
+    resp += "<br/>Start by using the action \"examine room\""
+    resp = resp.replace("\n", "<br>")
 
-  player = Player("player")
-  dungeon.add_player(player)
+  else:
+    dungeon = sessions[cookies["session"]]
+    content_length = int(env["CONTENT_LENGTH"])
+    content = env["wsgi.input"].read(content_length)
+    content = content.decode('utf-8')
+    action = content.replace("action=", "")
+    action = html.escape(action)
+    resp = "<br><b style='color:#FFFFFF'>> " + action + "</b><br>"
+    resp += dungeon.parse_action(cookies["session"], action)
+    resp = resp.replace("\n", "<br/>") # TODO change this depending on HTTP header values. Will allow support for terminals and browsers
 
-  intro_content = "Connected to game<br><br>" + dungeon.get_dungeon_desc()
-  intro_content += "<br/>Start by using the action \"examine room\""
-  intro_content = intro_content.replace("\n", "<br>")
-  uwsgi.websocket_send(intro_content)
+  return resp, resp_headers
 
+def get_cookies(env):
+  cookie = {}
   try:
-    # TODO Should really change this to an async model, but uwsgi can handle that for now.
-    while True:
-      action = uwsgi.websocket_recv()
-      action = str(action.decode("utf-8"))
-      action = html.escape(action)
-      resp = "<br><b style='color:#FFFFFF'>> " + action + "</b><br>"
-      resp += dungeon.parse_action(player.id, action)
-      resp = resp.replace("\n", "<br/>") # TODO change this depending on HTTP header values. Will allow support for terminals and browsers
-      uwsgi.websocket_send(resp.encode("utf-8"))
-  except Exception as e:
-    print("Lost connection to %s" % env["REMOTE_ADDR"])
-    print(e)
+    if("HTTP_COOKIE" in env):
+      cookie = {}
+      cookies = env["HTTP_COOKIE"].split(";")
+      for c in cookies:
+        cs = c.split("=")
+        cookie[cs[0]] = cs[1]
+  except:
+    pass
+  return cookie
 
 # uwsgi handler
 def application(env, sr):
-  global players
+  global sessions
+
+  resp_code = ""
+  resp_headers = []
 
   # For more routes to be added later
   pages = {
@@ -324,21 +335,27 @@ def application(env, sr):
   path = env['PATH_INFO']
   path_split = path.split("/")
 
-  if(env["REQUEST_METHOD"] == "GET"):
-    if(path in pages):
-      output = get_page(pages[path])
-      output = replace_placeholders(output, env)
-      resp_headers = [('Content-Type', 'text/html')]
-      sr('200 OK', resp_headers)
-    elif(len(path_split) > 2 and path_split[1] == "play"):
-      handle_websocket(path_split[2], env)
-      output = ""
-    else:
-      output = get_page("404")
-      resp_headers = [('Content-Type', 'text/html')]
-      sr('404 NOT FOUND', resp_headers)
-  elif(env["REQUEST_METHOD"] == "POST"):
-    output = ""
-    sr('200 OK', resp_headers)
+  try:
 
+    if(env["REQUEST_METHOD"] == "GET"):
+      if(path in pages):
+        output = get_page(pages[path])
+        output = replace_placeholders(output, env)
+        resp_headers = [('Content-Type', 'text/html')]
+        resp_code = '200 OK'
+      else:
+        output = get_page("404")
+        resp_headers = [('Content-Type', 'text/html')]
+        resp_code = '404 NOT FOUND'
+      resp_headers.append(('Set-Cookie', '{}={}; Expires={}; Max-Age={}; Path=/'.format("session", "", 0, 0)))
+    elif(env["REQUEST_METHOD"] == "POST"):
+      if(len(path_split) > 2 and path_split[1] == "play"):
+        output, resp_headers = handle_player_request(path_split[2], env)
+        resp_code = '200 OK'
+  except Exception as e:
+    resp_code = '200 OK'
+    resp_headers = [('Content-Type', 'text/html')]
+    output = "An error has occurred."
+
+  sr(resp_code, resp_headers)
   return output.encode("utf-8")

@@ -51,45 +51,31 @@
 			
 		</style>
 		<script>
-		
-		        var ws;
-			function openWebsocket(game) {
-			
-			        var ta = document.getElementById('text-area')
-				ta.innerHTML = ""
+			var game = "";
+			function setupGame(g) {
+				game = g;
+				var ta = document.getElementById('text-area');
+				ta.innerHTML = "";
 				document.getElementById('prompt').style.display = 'block';
-				
-			
-		    		ws = new WebSocket("$SERVER_IP$://$SERVER_PORT$/play/" + game);
-		    		ws.onopen = function() {
-
-		    		};
-		    		ws.onmessage = function(e) {
-			        	var ta = document.getElementById('text-area')
-				        var html = ta.innerHTML;
-				        ta.innerHTML = html + '<br/>' + e.data;
-				        ta.scrollTop = ta.scrollHeight;
-			    	};
-				ws.onerror = function(e) {
-		     			var ta = document.getElementById('text-area')
-				        var html = ta.innerHTML;
-		        		ta.innerHTML = html + '<br/>Error: ' + e.data;
-		        		ta.scrollTop = ta.scrollHeight;
-				}
-			    	ws.onclose = function(e) {
-	       			var ta = document.getElementById('text-area')
-				        var html = ta.innerHTML;
-		        		ta.innerHTML = html + '<br/>Connection closed.';
-		        		ta.scrollTop = ta.scrollHeight;
-		    		}
-		    	}
-		    	
+				send();
+			}
+		
 		    	function send() {
-				var prompt = document.getElementById("prompt");
-				ws.send(prompt.value);
-		      		prompt.value = "";
+                                var prompt = document.getElementById("prompt");
+                                var ta = document.getElementById("text-area");
+				var url = "$SERVER_IP$://$SERVER_PORT$/play/" + game
+				
+				var req = new XMLHttpRequest();
+				req.onload = function() {
+					ta.innerHTML = ta.innerHTML + '<br/>' + this.responseText;
+                                	ta.scrollTop = ta.scrollHeight;
+                                	prompt.value = "";
+				}
+				
+				req.open("POST", url);
+				req.send("action=" + prompt.value);
+
 		    	}
-			
           </script>
 
 
