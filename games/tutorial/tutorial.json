@@ -44,7 +44,7 @@
 						"points": 0
 					},
 					"fireplace": {
-						"description": "The bricks lining the fireplace have been blackened by smoke. The dark red bricks at either edge of the fireplace hint at it's original colour. A mirror hangs above the oak mantle. A small stack of kindling sits inside ready to be lit.",
+						"description": "The bricks lining the fireplace have been blackened by smoke. The dark red bricks at either edge of the fireplace hint at it's original colour. A mirror hangs above the oak mantle. A small stack of kindling sits inside ready to be lit. A box of matches lies on the hearth.",
 						"locked":false,
 						"linked_to": "",
 						"requires": "",
@@ -52,18 +52,21 @@
 						"points": 0
 					},
                                        "door": {
-                                              "description": "A surprisingly sturdy door given the state of the rest of the house. Could this be a way out?",
+						"description": "A surprisingly sturdy door given the state of the rest of the house. Could this be a way out?",
 						"locked":true,
 						"linked_to": "west",
 						"requires": "door key",
-                                              "item": "",
-                                              "points": 0
+						"item": "",
+						"points": 0
                                         }
 
 				},
 				"actions": {
 					"light fire": {
-						"description": "You try to light the fire, but the kindling is too damp.",
+						"description": "You take a match from the matchbox. You strike the match and toss it at the kindling. The fire is lit.",
+						"unlocks":"",
+						"action_success": "",
+						"action_fail": "",
 						"item":"",
 						"points":0
 					}
@@ -164,7 +167,10 @@
 				"actions": {
                                         "get in the car": {
                                                 "description": "You get in the car.",
-                                                "item":"",
+                                                "unlocks":"",
+                                                "action_success": "",
+                                                "action_fail": "",
+						"item":"",
                                                 "points":10
                                         }
 }

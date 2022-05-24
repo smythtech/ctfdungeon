@@ -99,7 +99,7 @@ class Dungeon():
     if(verb in routes):
       return routes[verb](player_id, action)
     elif(action in room["actions"]):
-      return self.parse_room_action(player_id, action, room["actions"])
+      return self.parse_room_action(player_id, action, room)
     else:
       return "Can't do that..."
 
@@ -177,13 +177,7 @@ class Dungeon():
       if(item in player_inv):
         if(feature in current_room["features"]):
           if(item == current_room["features"][feature]["requires"]):
-            self.dungeon["rooms"][current_room["id"]]["features"][feature]["locked"] = False
-            self.players[player_id].current_room = self.dungeon["rooms"][current_room["id"]]
-            dir = current_room["features"][feature]["linked_to"]
-            if(dir != ""):
-               if(dir in current_room["directions"]):
-                 self.dungeon["rooms"][current_room["id"]]["directions"][dir]["locked"] = False
-                 self.players[player_id].current_room = self.dungeon["rooms"][current_room["id"]]
+            self.change_feature_lock_state(player_id, current_room, feature)
             s += self.dungeon["items"][item]["use_success"]
           else:
             s += self.dungeon["items"][item]["use_fail"]
@@ -202,10 +196,32 @@ class Dungeon():
     return s
 
   # Parse special action for room
-  def parse_room_action(self, player_id, action, actions):
-    s = actions[action]["description"]
-    s += self.get_rewards(player_id, actions[action])
+  def parse_room_action(self, player_id, action, room):
+    action = room["actions"][action]
+
+    s = action["description"]
+    unlocks_feature = action["unlocks"]
+
+    if(unlocks_feature != ""):
+      if(unlocks_feature in room["features"]):
+        change_feature_lock_state(player_id, room, unlocks_feature)
+        s += action["action_success"]
+      else:
+        s += action["action_fail"]
+
+    s += self.get_rewards(player_id, action)
     return s
+
+  # Change feature state
+  def change_feature_lock_state(self, player_id, current_room, feature):
+    self.dungeon["rooms"][current_room["id"]]["features"][feature]["locked"] = False
+    self.players[player_id].current_room = self.dungeon["rooms"][current_room["id"]]
+    dir = current_room["features"][feature]["linked_to"]
+    if(dir != ""):
+      if(dir in current_room["directions"]):
+        self.dungeon["rooms"][current_room["id"]]["directions"][dir]["locked"] = False
+        self.players[player_id].current_room = self.dungeon["rooms"][current_room["id"]]
+
 
   def get_rewards(self, player_id, obj):
     item = obj["item"]
@@ -257,7 +273,7 @@ def build_games_table_html():
       html_output += '<div id="game-option-art" name="game-option-art">'
       if(i["art_type"] == "text"):
         html_output += '<pre>'
-        f = open(i["art_file"])
+        f = open("./games/" + i["art_file"])
         html_output += f.read()
         f.close()
         html_output += '</pre>'

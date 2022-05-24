@@ -7,7 +7,7 @@
 			"difficulty": "easy",
 			"length": "short",
 			"art_type": "text",
-			"art_file": "./games/tutorial/art.txt"
+			"art_file": "tutorial/assets/cover_art.txt"
 		}
 	]
 
