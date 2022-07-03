@@ -5,6 +5,7 @@ import html
 import json
 import random
 import datetime
+import re
 
 sessions = {}
 
@@ -87,6 +88,21 @@ class Dungeon():
     else:
       return self.dungeon["rooms"]["undefined"]
 
+  # Find a custom room action if one exists. Return that action object.
+  def get_custom_action(self, action_name, room_actions):
+    for act_re in room_actions:
+      match = re.search(act_re, action_name)
+      if(match):
+        return room_actions[act_re]
+
+  # Use pass in json object and list that object appears in to get the name for that object.
+  def get_obj_name(self, obj, obj_list):
+    obj_desc = obj["description"]
+    for o_name in obj_list:
+      desc = obj_list[o_name]["description"]
+      if(obj_desc == desc):
+        return o_name
+
   # Handle action verb and route to relevant function
   def parse_action(self, player_id, action):
     routes = {
@@ -98,12 +114,16 @@ class Dungeon():
     verb = action.split(" ")[0]
     if(verb in routes):
       return routes[verb](player_id, action)
-    elif(action in room["actions"]):
-      return self.parse_room_action(player_id, action, room)
+    #elif(action in room["actions"]):
+      #return self.parse_room_action(player_id, action, room)
     else:
-      return "Can't do that..."
+      act = self.get_custom_action(action, room["actions"])
+      if(act):
+        return self.parse_room_action(player_id, act, room)
 
-  # Parse a go action
+    return "Can't do that..."
+
+   # Parse a go action
   def parse_go(self, player_id, action):
     current_room = self.players[player_id].current_room
     dir = action.replace("go ", "")
@@ -153,10 +173,7 @@ class Dungeon():
         item_name = self.dungeon["rooms"][current_room["id"]]["features"][thing]["item"]
         s += "\n"
         s += self.dungeon["items"][item_name]["found"]
-        s += self.get_rewards(player_id, feature)
-        self.dungeon["rooms"][current_room["id"]]["features"][thing]["item"] = ""
-        self.dungeon["rooms"][current_room["id"]]["features"][thing]["points"] = 0
-        self.players[player_id].current_room = self.dungeon["rooms"][current_room["id"]]
+        s += self.get_rewards(player_id, current_room, feature)
     elif((" " + thing + " ") in self.get_room_desc(current_room)):
       s = "Nothing more to say about it..."
     else:
@@ -197,19 +214,19 @@ class Dungeon():
 
   # Parse special action for room
   def parse_room_action(self, player_id, action, room):
-    action = room["actions"][action]
+    #action = room["actions"][action]
 
     s = action["description"]
     unlocks_feature = action["unlocks"]
 
     if(unlocks_feature != ""):
       if(unlocks_feature in room["features"]):
-        change_feature_lock_state(player_id, room, unlocks_feature)
+        self.change_feature_lock_state(player_id, room, unlocks_feature)
         s += action["action_success"]
       else:
         s += action["action_fail"]
 
-    s += self.get_rewards(player_id, action)
+    s += self.get_rewards(player_id, room, action)
     return s
 
   # Change feature state
@@ -223,9 +240,13 @@ class Dungeon():
         self.players[player_id].current_room = self.dungeon["rooms"][current_room["id"]]
 
 
-  def get_rewards(self, player_id, obj):
+  def get_rewards(self, player_id, current_room, obj):
     item = obj["item"]
     point = obj["points"]
+
+    room_features = self.dungeon["rooms"][current_room["id"]]["features"] # [thing]["item"] = ""
+    room_actions = self.dungeon["rooms"][current_room["id"]]["actions"] # [thing]["points"] = 0
+
     s = ""
     if(item != ""):
       self.players[player_id].items.append(item)
@@ -236,6 +257,23 @@ class Dungeon():
       s += "<br>You have " + str(self.players[player_id].points) + " points"
     if(self.players[player_id].points >= self.dungeon["max_points"]):
       s += "<br><br>Congratulations! You have completed " + self.dungeon["name"]
+
+    obj_name = None
+    obj_name = self.get_obj_name(obj, room_features)
+    if(obj_name == None):
+      obj_name = self.get_obj_name(obj, room_actions)
+
+    if(obj_name in room_features):
+      room_features[obj_name]["item"] = ""
+      room_features[obj_name]["points"] = 0
+    elif(obj_name in room_actions):
+      room_actions[obj_name]["item"] = ""
+      room_actions[obj_name]["points"] = 0
+
+    self.dungeon["rooms"][current_room["id"]]["features"] = room_features
+    self.dungeon["rooms"][current_room["id"]]["actions"] = room_actions
+    self.players[player_id].current_room = self.dungeon["rooms"][current_room["id"]]
+
     return s
 
 # Cookie creator borrowed from https://stackoverflow.com/questions/14107260/set-a-cookie-and-retrieve-it-with-python-and-wsgi
@@ -261,34 +299,43 @@ def replace_placeholders(output, env):
     output = output.replace("$GAMES$", build_games_table_html())
   return output
 
+def get_games(games_file):
+  games_file = "./games/games.json"
+  f = open(games_file, 'r')
+  games = json.loads(f.read())
+  f.close()
+  return games["games"]
+
 def build_games_table_html():
   try:
-    games_file = "./games/games.json"
-    f = open(games_file, 'r')
-    games = json.loads(f.read())
-    f.close()
+    games = get_games("./games/games.json") # Hardcode for now. Might change later.
+    
     html_output = '<div id="game-select" name="game-select">'
-    for i in games["games"]:
+    for i in games:
       html_output += '<div id="game-option" onclick=\'setupGame(\"' + i["id"] + '\");\'>'
       html_output += '<div id="game-option-art" name="game-option-art">'
       if(i["art_type"] == "text"):
         html_output += '<pre>'
-        f = open("./games/" + i["art_file"])
+        f = open(i["art_file"])
         html_output += f.read()
         f.close()
         html_output += '</pre>'
 
       html_output += '</div>'
       html_output += '<div id="game-option-name" name="game-option-name">'
-      html_output += '<p>' + i["name"] + '</p>'
+      html_output += '<h2>' + i["name"] + '</h2>'
       html_output += '<p>Difficulty: ' + i["difficulty"] + '<br>'
       html_output += 'Length: ' + i["length"] + '</p>'
       html_output += '</div>'
-      html_output += '</div>'
+      html_output += '</div><br>'
     html_output += '</div>'
+    
+    #html_output = ""
+    
     return html_output
   except Exception as e:
-    return "Error getting available games..."
+    #return "Error getting available games..."
+    return str(e)
 
 # API endpoint alternitive to the websocket. Easier for deployment on third-party services that use wsgi rather than uwsgi
 def handle_player_request(game, env):
@@ -299,7 +346,15 @@ def handle_player_request(game, env):
 
   if("session" not in cookies):
     player = Player("player")
-    dungeon_file_path = "./games/" + game + "/" + game + ".json"
+    games = get_games("./games/games.json")
+    dungeon_file_path = ""
+    for g in games:
+      if(g["id"] == game):
+        dungeon_file_path = g["path"]
+    if(dungeon_file_path == ""):
+      resp = "Dungeon not found"
+      return resp, resp_headers
+
     dungeon = Dungeon()
     dungeon.load_dungeon(dungeon_file_path)
     dungeon.add_player(player)
@@ -372,6 +427,7 @@ def application(env, sr):
     resp_code = '200 OK'
     resp_headers = [('Content-Type', 'text/html')]
     output = "An error has occurred."
+    output += str(e.message)
 
   sr(resp_code, resp_headers)
   return output.encode("utf-8")

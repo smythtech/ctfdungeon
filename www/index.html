@@ -34,11 +34,12 @@
 			}
 			
 			#game-select {
-				padding:2%; height:60%;vertical-align:top;text-align:center;display:flex;justify-content:space-evenly;
+				padding:2%; height:60%;vertical-align:top;text-align:center;/*display:flex;justify-content:space-evenly;*/
 			}
 			
 			#game-option {
-				width:300px;border-style:solid;border-radius:16px;height:400px;
+				width:100%;border-style:solid;border-radius:16px; display:flex;justify-content:space-evenly;
+				/*width:300px;border-style:solid;border-radius:16px;height:400px;*/
 			}
 			
 			#game-option-art {
@@ -71,7 +72,12 @@
                                 	ta.scrollTop = ta.scrollHeight;
                                 	prompt.value = "";
 				}
-				
+				req.onerror = function() {
+					ta.innerHTML = ta.innerHTML + '<br/><p style="color:red"">Problem contacting server.</p>';
+					ta.scrollTop = ta.scrollHeight;
+					prompt.value = "";
+				}
+
 				req.open("POST", url);
 				req.send("action=" + prompt.value);
 
