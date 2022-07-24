@@ -27,7 +27,7 @@ class Dungeon():
   # Default Constructer
   def __init__(self):
     self.dungeon = {}
-    self.players = {}
+    self.players = {} # For future multiplayer
 
   # Load and parse dungeon json file
   def load_dungeon(self, d_file):
@@ -214,7 +214,6 @@ class Dungeon():
 
   # Parse special action for room
   def parse_room_action(self, player_id, action, room):
-    #action = room["actions"][action]
 
     s = action["description"]
     unlocks_feature = action["unlocks"]
@@ -289,6 +288,20 @@ def get_page(file):
   f.close()
   return contents
 
+def get_scoreboard():
+  players = ""
+  for p in sessions:
+    players += sessions[p].players[p].id
+    players += "   "
+    players += sessions[p].players[p].name
+    players += "   "
+    players += str(sessions[p].players[p].points)
+    players += "   "
+    players += sessions[p].players[p].current_room["name"]
+    players += "<br>"
+
+  return players
+
 def replace_placeholders(output, env):
   protocol = 'http'
   if 'HTTPS' in env or env['wsgi.url_scheme'] == 'https':
@@ -309,7 +322,7 @@ def get_games(games_file):
 def build_games_table_html():
   try:
     games = get_games("./games/games.json") # Hardcode for now. Might change later.
-    
+
     html_output = '<div id="game-select" name="game-select">'
     for i in games:
       html_output += '<div id="game-option" onclick=\'setupGame(\"' + i["id"] + '\");\'>'
@@ -329,9 +342,9 @@ def build_games_table_html():
       html_output += '</div>'
       html_output += '</div><br>'
     html_output += '</div>'
-    
+
     #html_output = ""
-    
+
     return html_output
   except Exception as e:
     #return "Error getting available games..."
@@ -344,7 +357,13 @@ def handle_player_request(game, env):
   resp_headers = [('Content-Type', 'text/html')]
   dungeon = {}
 
-  if("session" not in cookies):
+  content_length = int(env["CONTENT_LENGTH"])
+  content = env["wsgi.input"].read(content_length)
+  content = content.decode('utf-8')
+  action = content.replace("action=", "")
+  action = html.escape(action)
+
+  if(("session" not in cookies) or (action == "init")):
     player = Player("player")
     games = get_games("./games/games.json")
     dungeon_file_path = ""
@@ -367,11 +386,6 @@ def handle_player_request(game, env):
 
   else:
     dungeon = sessions[cookies["session"]]
-    content_length = int(env["CONTENT_LENGTH"])
-    content = env["wsgi.input"].read(content_length)
-    content = content.decode('utf-8')
-    action = content.replace("action=", "")
-    action = html.escape(action)
     resp = "<br><b style='color:#FFFFFF'>> " + action + "</b><br>"
     resp += dungeon.parse_action(cookies["session"], action)
     resp = resp.replace("\n", "<br/>") # TODO change this depending on HTTP header values. Will allow support for terminals and browsers
@@ -388,7 +402,7 @@ def get_cookies(env):
         cs = c.split("=")
         cookie[cs[0]] = cs[1]
   except:
-    pass
+    return {}
   return cookie
 
 # uwsgi handler
@@ -399,8 +413,12 @@ def application(env, sr):
   resp_headers = []
 
   # For more routes to be added later
-  pages = {
+  static_pages = {
     "/": "index"
+  }
+
+  dynamic_pages = {
+    "/scoreboard": get_scoreboard
   }
 
   path = env['PATH_INFO']
@@ -409,16 +427,23 @@ def application(env, sr):
   try:
 
     if(env["REQUEST_METHOD"] == "GET"):
-      if(path in pages):
-        output = get_page(pages[path])
+      if(path in static_pages):
+	# Get contents of file to go with the static page
+        output = get_page(static_pages[path])
         output = replace_placeholders(output, env)
         resp_headers = [('Content-Type', 'text/html')]
         resp_code = '200 OK'
+#      elif(path in dynamic_pages):
+	# Call function associated with dymanic page
+#        output = dynamic_pages[path]()
+#        output = replace_placeholders(output, env)
+#        resp_headers = [('Content-Type', 'text/html')]
+#        resp_code = '200 OK'
       else:
         output = get_page("404")
         resp_headers = [('Content-Type', 'text/html')]
         resp_code = '404 NOT FOUND'
-      resp_headers.append(('Set-Cookie', '{}={}; Expires={}; Max-Age={}; Path=/'.format("session", "", 0, 0)))
+
     elif(env["REQUEST_METHOD"] == "POST"):
       if(len(path_split) > 2 and path_split[1] == "play"):
         output, resp_headers = handle_player_request(path_split[2], env)
@@ -427,7 +452,8 @@ def application(env, sr):
     resp_code = '200 OK'
     resp_headers = [('Content-Type', 'text/html')]
     output = "An error has occurred."
-    output += str(e.message)
+    output += str(sessions)
+    output += str(e)
 
   sr(resp_code, resp_headers)
   return output.encode("utf-8")
