@@ -343,12 +343,9 @@ def build_games_table_html():
       html_output += '</div><br>'
     html_output += '</div>'
 
-    #html_output = ""
-
     return html_output
   except Exception as e:
-    #return "Error getting available games..."
-    return str(e)
+    return "Error getting available games..."
 
 # API endpoint alternitive to the websocket. Easier for deployment on third-party services that use wsgi rather than uwsgi
 def handle_player_request(game, env):
@@ -452,8 +449,6 @@ def application(env, sr):
     resp_code = '200 OK'
     resp_headers = [('Content-Type', 'text/html')]
     output = "An error has occurred."
-    output += str(sessions)
-    output += str(e)
 
   sr(resp_code, resp_headers)
   return output.encode("utf-8")
