@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import os
 import sys
 import html
 import json
@@ -28,12 +29,14 @@ class Dungeon():
   def __init__(self):
     self.dungeon = {}
     self.players = {} # For future multiplayer
+    self.dungeon_filename = ""
 
   # Load and parse dungeon json file
   def load_dungeon(self, d_file):
     f = open(d_file, 'r')
     json_data = json.loads(f.read())
     self.dungeon = json_data["dungeon"]
+    self.dungeon_filename = d_file.split(".json")[0]
     f.close()
 
   def add_player(self, player):
@@ -288,17 +291,47 @@ def get_page(file):
   f.close()
   return contents
 
+def handle_file_download_request(env, path):
+  cookies = get_cookies(env)
+
+  if(("session" in cookies) and (cookies["session"] in sessions)):
+    item_id = path.split("/")[-1]
+    player = sessions[cookies["session"]].players[cookies["session"]]
+    dungeon_items = sessions[cookies["session"]].dungeon["items"]
+
+    if((item_id in dungeon_items) and (item_id in player.items)):
+      item_file_path = dungeon_items[item_id]["file_path"]
+      if(len(item_file_path) > 0):
+        f = open(item_file_path, "rb")
+        size = os.path.getsize(item_file_path)
+        resp_headers = [('Content-Type', 'application/octet-stream'), ('Content-length', str(size)), ('Content-Disposition', 'attachment; filename='+ item_file_path.split("/")[-1])]
+      if 'wsgi.file_wrapper' in env:
+        file_read =  env['wsgi.file_wrapper'](f, 1024)
+      else:
+        file_read = iter(lambda: f.read(1024), '')
+    else:
+      file_read = ""
+      resp_headers = [('Content-Type', 'text/html')]
+  else:
+    file_read = ""
+    resp_headers = [('Content-Type', 'text/html')]
+
+  return file_read, resp_headers
+
+
 def get_scoreboard():
-  players = ""
+  players = "<table>"
   for p in sessions:
-    players += sessions[p].players[p].id
-    players += "   "
+    players += "<tr>"
+    players += "<td>"
     players += sessions[p].players[p].name
-    players += "   "
+    players += "</td><td>"
     players += str(sessions[p].players[p].points)
-    players += "   "
+    players += "</td><td>"
     players += sessions[p].players[p].current_room["name"]
-    players += "<br>"
+    players += "</td></tr>"
+
+  players += "</table>"
 
   return players
 
@@ -360,8 +393,9 @@ def handle_player_request(game, env):
   action = content.replace("action=", "")
   action = html.escape(action)
 
-  if(("session" not in cookies) or (action == "init")):
+  if(("session" not in cookies) or (cookies["session"] not in sessions) or (action == "init")):
     player = Player("player")
+    player.name = "Anon"
     games = get_games("./games/games.json")
     dungeon_file_path = ""
     for g in games:
@@ -430,12 +464,18 @@ def application(env, sr):
         output = replace_placeholders(output, env)
         resp_headers = [('Content-Type', 'text/html')]
         resp_code = '200 OK'
-#      elif(path in dynamic_pages):
+      elif(path in dynamic_pages):
 	# Call function associated with dymanic page
-#        output = dynamic_pages[path]()
-#        output = replace_placeholders(output, env)
-#        resp_headers = [('Content-Type', 'text/html')]
-#        resp_code = '200 OK'
+        output = dynamic_pages[path]()
+        output = replace_placeholders(output, env)
+        resp_headers = [('Content-Type', 'text/html')]
+        resp_code = '200 OK'
+      elif("download" in path):
+        # File download request
+        resp_code = '200 OK'
+        output, resp_headers = handle_file_download_request(env, path)
+        sr(resp_code, resp_headers)
+        return output # Return here as we don't want the file data to be encoded
       else:
         output = get_page("404")
         resp_headers = [('Content-Type', 'text/html')]
@@ -449,6 +489,7 @@ def application(env, sr):
     resp_code = '200 OK'
     resp_headers = [('Content-Type', 'text/html')]
     output = "An error has occurred."
+    output += str(e)
 
   sr(resp_code, resp_headers)
   return output.encode("utf-8")
