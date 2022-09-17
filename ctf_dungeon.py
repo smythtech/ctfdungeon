@@ -133,14 +133,11 @@ class Dungeon():
     }
     room = self.players[player_id].current_room
     verb = action.split(" ")[0]
-    if(verb in routes):
+    act = self.get_custom_action(action, room["actions"])
+    if(act):
+      return self.parse_room_action(player_id, act, room)
+    elif(verb in routes):
       return routes[verb](player_id, action)
-    #elif(action in room["actions"]):
-      #return self.parse_room_action(player_id, action, room)
-    else:
-      act = self.get_custom_action(action, room["actions"])
-      if(act):
-        return self.parse_room_action(player_id, act, room)
 
     return "Can't do that..."
 
@@ -246,6 +243,11 @@ class Dungeon():
       else:
         s += action["action_fail"]
 
+    if(action["item"] != ""):
+      item_name = action["item"]
+      s += "\n"
+      s += self.dungeon["items"][item_name]["found"]
+
     s += self.get_rewards(player_id, room, action)
     return s
 
@@ -269,8 +271,15 @@ class Dungeon():
 
     s = ""
     if(item != ""):
+      item_obj = self.dungeon["items"][item]
       self.players[player_id].items.append(item)
-      s += "<br>You have aquired: " + self.dungeon["items"][item]["name"]
+      s += "<br>You have aquired: " + item_obj["name"]
+      if(item_obj["file_action"] == "read"):
+        f = open(item_obj["file_path"], 'r')
+        s += f.read()
+        f.close()
+      elif(item_obj["file_action"] == "download"):
+        s += "<a href='" + item_obj["file_path"] + "'>Download</a>"
     if(point > 0):
       self.players[player_id].points += point
       s += "<br>You have gained " + str(point) + " point(s)"
@@ -323,10 +332,11 @@ def handle_file_download_request(env, path):
         f = open(item_file_path, "rb")
         size = os.path.getsize(item_file_path)
         resp_headers = [('Content-Type', 'application/octet-stream'), ('Content-length', str(size)), ('Content-Disposition', 'attachment; filename='+ item_file_path.split("/")[-1])]
-      if 'wsgi.file_wrapper' in env:
-        file_read =  env['wsgi.file_wrapper'](f, 1024)
-      else:
-        file_read = iter(lambda: f.read(1024), '')
+        if 'wsgi.file_wrapper' in env:
+          file_read =  env['wsgi.file_wrapper'](f, 1024)
+        else:
+          file_read = iter(lambda: f.read(1024), '')
+        f.close()
     else:
       file_read = ""
       resp_headers = [('Content-Type', 'text/html')]
