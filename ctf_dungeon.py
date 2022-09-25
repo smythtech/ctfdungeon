@@ -124,6 +124,12 @@ class Dungeon():
       if(obj_desc == desc):
         return o_name
 
+  def get_matching_feature(self, thing, features):
+    for feature_re in features:
+      match = re.search(feature_re, thing)
+      if(match):
+        return (feature_re, features[feature_re])
+
   # Handle action verb and route to relevant function
   def parse_action(self, player_id, action):
     routes = {
@@ -166,6 +172,7 @@ class Dungeon():
     thing = action.replace("examine ", "")
     current_room = self.players[player_id].current_room
     room_desc = current_room["description"].replace(".", " ")
+    matching_feature = self.get_matching_feature(thing, current_room["features"])
     s = ""
     if(thing == "bag"):
       items = self.players[player_id].items
@@ -180,8 +187,8 @@ class Dungeon():
       s =  self.get_room_desc(current_room)
     elif(thing in self.players[player_id].items):
       s =  self.get_item_desc(self.dungeon["items"][thing])
-    elif(thing in current_room["features"]):
-      feature = current_room["features"][thing]
+    elif(matching_feature and matching_feature[1]):
+      feature = matching_feature[1]
       s = feature["description"]
       locked = feature["locked"]
       if("$STATE$" in s):
@@ -208,7 +215,7 @@ class Dungeon():
     if(" on " in action):
       things = action.split(" on ")
       item = things[0].replace("use ", "")
-      feature = things[1]
+      feature = self.get_matching_feature(thing[1], current_room["features"])[0]
       if(item in player_inv):
         if(feature in current_room["features"]):
           if(item == current_room["features"][feature]["requires"]):
@@ -234,15 +241,18 @@ class Dungeon():
   def parse_room_action(self, player_id, action, room):
 
     s = action["description"]
+
     unlocks_feature = action["unlocks"]
+    matching_feature = self.get_matching_feature(action["unlocks"], room["features"])
+
+    print(f'unlocks: {unlocks_feature} ----- matching {matching_feature}')
 
     if(unlocks_feature != ""):
-      if(unlocks_feature in room["features"]):
-        self.change_feature_lock_state(player_id, room, unlocks_feature)
+      if(matching_feature):
+        self.change_feature_lock_state(player_id, room, matching_feature[0])
         s += action["action_success"]
       else:
         s += action["action_fail"]
-
     if(action["item"] != ""):
       item_name = action["item"]
       s += "\n"
@@ -473,7 +483,8 @@ def application(env, sr):
 
   # For more routes to be added later
   static_pages = {
-    "/": "index"
+    "/": "index",
+    "/help": "help"
   }
 
   dynamic_pages = {

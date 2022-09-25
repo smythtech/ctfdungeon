@@ -51,40 +51,6 @@
 			}
 			
 		</style>
-		<script>
-			var game = "";
-			function setupGame(g) {
-				game = g;
-				var ta = document.getElementById('text-area');
-				ta.innerHTML = "";
-				document.getElementById('prompt').style.display = 'block';
-				document.getElementById("prompt").value = "init";
-				send();
-			}
-		
-		    	function send() {
-                                var prompt = document.getElementById("prompt");
-                                var ta = document.getElementById("text-area");
-				var url = "$SERVER_IP$://$SERVER_PORT$/play/" + game
-				
-				var req = new XMLHttpRequest();
-				req.onload = function() {
-					ta.innerHTML = ta.innerHTML + '<br/>' + this.responseText;
-                                	ta.scrollTop = ta.scrollHeight;
-                                	prompt.value = "";
-				}
-				req.onerror = function() {
-					ta.innerHTML = ta.innerHTML + '<br/><p style="color:red"">Problem contacting server.</p>';
-					ta.scrollTop = ta.scrollHeight;
-					prompt.value = "";
-				}
-
-				req.open("POST", url);
-				req.send("action=" + prompt.value);
-
-		    	}
-          </script>
-
 
 
 	</head>
@@ -105,7 +71,7 @@
 		<div id="links" name="links">
 		<br><br>
                 <a href="/">Home</a>&nbsp;&nbsp;&nbsp;
-                <a href="/help" target="_blank">Help</a>&nbsp;&nbsp;&nbsp;
+		<a href="/help" target="_blank">Help</a>&nbsp;&nbsp;&nbsp;
 		<a href="https://github.com/smythtech/ctfdungeon">Github</a>&nbsp;&nbsp;&nbsp;
 		<!--<a href="/register">Register</a>&nbsp;&nbsp;&nbsp;
                 <a href="/login">Login</a>&nbsp;&nbsp;&nbsp;-->
@@ -114,22 +80,11 @@
 
 	<div id="game-area" name="game-area">
 		<div id="text-area" name="text-area">
-			<p>CTF Dungeon provides a context for Capture The Flag (CTF) challenges in the form of a text-based adventure. Points can be earned by playing the game, solving puzzles, and solving technical challenges presented through the game.</p>		
-			$GAMES$
-		
+			<h1>CTF Dungeon Manual</h2>
+			<p>test test test</p>		
 		</div>
 		<br>
-		<input id="prompt" name="prompt" type="text" placeholder="Type action and press enter"/>
 	</div>
-	<script>
-       	(function() {
-         		document.getElementById("prompt").addEventListener("keydown", function(event) {
-         			if(event.keyCode == 13) {
-           				send();
-         			}
-         		});
-       	})();
-     </script>
 
 	</body>
 </html>
